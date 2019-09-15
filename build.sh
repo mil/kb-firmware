@@ -27,7 +27,7 @@ function build_kb() {
     #sudo dfu-programmer atmega32u4 erase
     #sudo dfu-programmer atmega32u4 flash hhkb_milhhkb.hex
 
-    docker run \
+    docker run -it \
       -e MIDI_ENABLE=yes \
       -e keymap=milhhkb \
       --privileged  \
@@ -37,7 +37,7 @@ function build_kb() {
   fi
 
   if [ "$1" = "iris" ]; then
-    docker run \
+    docker run -it \
       -e MIDI_ENABLE=yes \
       -e keymap=miliris_qwert  \
       --privileged  \
@@ -47,13 +47,23 @@ function build_kb() {
   fi
 
   if [ "$1" = "atreus" ]; then
-    docker run \
+    docker run -it \
       -e MIDI_ENABLE=yes \
       -e keymap=milatreus \
       --privileged  \
       -v `pwd`/qmk_firmware:/qmk \
       -v /dev:/dev \
       qmkf make atreus:milatreus:avrdude
+  fi
+
+  if [ "$1" = "conv" ]; then
+    docker run -it \
+      -e MIDI_ENABLE=yes \
+      -e keymap=milconv \
+      --privileged  \
+      -v `pwd`/qmk_firmware:/qmk \
+      -v /dev:/dev \
+      qmkf make converter/usb_usb:milconv:dfu
   fi
 
   if [ "$1" = "shell" ]; then
