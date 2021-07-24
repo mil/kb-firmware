@@ -3,9 +3,9 @@ QMK_V=0.7.13
 FIRMWARE_FOLDER=qmk_firmware
 QMK_REPO=https://github.com/qmk/qmk_firmware
 
-function die() { echo $@ && exit 1; }
+die() { echo $@ && exit 1; }
 
-function initialize() {
+initialize() {
   # TODO: maybe move this to be within docker?
   cd "$(dirname "$0")"
   git clone $QMK_REPO --depth 1 --branch $QMK_V $FIRMWARE_FOLDER || echo "already cloned"
@@ -18,52 +18,48 @@ function initialize() {
   docker build -t qmkf .
 }
 
-function build_kb() {
+maketask() {
+  docker run -it \
+    -e MIDI_ENABLE=yes \
+    -e keymap=$KEYMAP \
+    --privileged  \
+    -v `pwd`/qmk_firmware:/qmk \
+    -v /dev:/dev \
+    qmkf make $TASK
+}
+
+build_kb() {
   echo "Building $1"
   cp --parents -r keyboards/*/* $FIRMWARE_FOLDER/
-  if [ "$1" = "hhkb" ]; then
-    #docker run -e MIDI_ENABLE=yes -e keymap=milhhkb -e subproject="" -e keyboard=hhkb --rm -v $(pwd):/qmk:rw qmkf
-    #MIDI_ENABLE=yes keymap=milhhkb keyboard=hhkb make
-    #sudo dfu-programmer atmega32u4 erase
-    #sudo dfu-programmer atmega32u4 flash hhkb_milhhkb.hex
 
-    docker run -it \
-      -e MIDI_ENABLE=yes \
-      -e keymap=milhhkb \
-      --privileged  \
-      -v `pwd`/qmk_firmware:/qmk \
-      -v /dev:/dev \
-      qmkf make hhkb:dfu
+  if [ "$1" = "hhkb" ]; then
+    KEYMAP=milhhkb
+    TASK=hhkb:dfu
+    maketask
   fi
 
   if [ "$1" = "iris" ]; then
-    docker run -it \
-      -e MIDI_ENABLE=yes \
-      -e keymap=miliris_qwert  \
-      --privileged  \
-      -v `pwd`/qmk_firmware:/qmk \
-      -v /dev:/dev \
-      qmkf make iris/rev2:avrdude
+    KEYMAP=miliris_qwert
+    TASK=iris/rev2:avrdude
+    maketask
   fi
 
   if [ "$1" = "atreus" ]; then
-    docker run -it \
-      -e MIDI_ENABLE=yes \
-      -e keymap=milatreus \
-      --privileged  \
-      -v `pwd`/qmk_firmware:/qmk \
-      -v /dev:/dev \
-      qmkf make atreus:milatreus:avrdude
+    KEYMAP=milatreus
+    TASK=atreus:milatreus:avrdude
+    maketask
   fi
 
   if [ "$1" = "conv" ]; then
-    docker run -it \
-      -e MIDI_ENABLE=yes \
-      -e keymap=milconv \
-      --privileged  \
-      -v `pwd`/qmk_firmware:/qmk \
-      -v /dev:/dev \
-      qmkf make converter/usb_usb:milconv:dfu
+    KEYMAP=milconv
+    TASK=converter/usb_usb:milconv:dfu
+    maketask
+  fi
+
+  if [ "$1" = "ploopy" ]; then
+    KEYMAP=milploopy
+    TASK=ploopyco/trackball_mini
+    maketask
   fi
 
   if [ "$1" = "shell" ]; then
