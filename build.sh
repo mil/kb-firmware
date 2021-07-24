@@ -1,12 +1,12 @@
 #!/usr/bin/env sh
-QMK_V=0.7.13
+set -x 
+QMK_V=0.13.25
 FIRMWARE_FOLDER=qmk_firmware
 QMK_REPO=https://github.com/qmk/qmk_firmware
 
 die() { echo $@ && exit 1; }
 
 initialize() {
-  # TODO: maybe move this to be within docker?
   cd "$(dirname "$0")"
   git clone $QMK_REPO --depth 1 --branch $QMK_V $FIRMWARE_FOLDER || echo "already cloned"
   cd $FIRMWARE_FOLDER
@@ -15,17 +15,11 @@ initialize() {
   make git-submodule
   git clean -f
   cd ..
-  docker build -t qmkf .
 }
 
 maketask() {
-  docker run -it \
-    -e MIDI_ENABLE=yes \
-    -e keymap=$KEYMAP \
-    --privileged  \
-    -v `pwd`/qmk_firmware:/qmk \
-    -v /dev:/dev \
-    qmkf make $TASK
+  cd $FIRMWARE_FOLDER/
+  doas ./util/docker_build.sh "$1"
 }
 
 build_kb() {
@@ -33,41 +27,15 @@ build_kb() {
   cp --parents -r keyboards/*/* $FIRMWARE_FOLDER/
 
   if [ "$1" = "hhkb" ]; then
-    KEYMAP=milhhkb
-    TASK=hhkb:dfu
-    maketask
-  fi
-
-  if [ "$1" = "iris" ]; then
-    KEYMAP=miliris_qwert
-    TASK=iris/rev2:avrdude
-    maketask
-  fi
-
-  if [ "$1" = "atreus" ]; then
-    KEYMAP=milatreus
-    TASK=atreus:milatreus:avrdude
-    maketask
-  fi
-
-  if [ "$1" = "conv" ]; then
-    KEYMAP=milconv
-    TASK=converter/usb_usb:milconv:dfu
-    maketask
-  fi
-
-  if [ "$1" = "ploopy" ]; then
-    KEYMAP=milploopy
-    TASK=ploopyco/trackball_mini
-    maketask
-  fi
-
-  if [ "$1" = "shell" ]; then
-    docker run -it \
-      --privileged  \
-      -v `pwd`/qmk_firmware:/qmk \
-      -v /dev:/dev \
-      qmkf sh
+    maketask hhkb:milhhkb:dfu
+  elif [ "$1" = "iris" ]; then
+    maketask iris/rev2:miliris_qwert:avrdude
+  elif [ "$1" = "atreus" ]; then
+    maketask atreus:milatreus:avrdude
+  elif [ "$1" = "conv" ]; then
+    maketask converter/usb_usb:milconv:dfu
+  elif [ "$1" = "ploopy" ]; then
+    maketask ploopyco/trackball_mini/rev1_002:milploopy:flash
   fi
 }
 
